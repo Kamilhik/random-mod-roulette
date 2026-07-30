@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AlertTriangle, Sparkles } from "lucide-react";
 import type { ModProject, RouletteFilters } from "@/types/mod";
 import { shuffle } from "@/lib/format";
+import { UI_TEXT, type Language } from "@/lib/i18n";
 import { Filters } from "@/components/Filters";
 import { HistoryList } from "@/components/HistoryList";
 import { ModBundleCard } from "@/components/ModBundleCard";
@@ -30,7 +31,12 @@ const MAX_DROP_COUNT = 24;
 const REPEAT_COUNT = 8;
 const TARGET_REPEAT = 5;
 
-export function Roulette() {
+type RouletteProps = {
+  language: Language;
+};
+
+export function Roulette({ language }: RouletteProps) {
+  const t = UI_TEXT[language];
   const [filters, setFilters] = useState<RouletteFilters>({ version: "", loader: "", category: "" });
   const [dropCount, setDropCount] = useState(1);
   const [reelBundles, setReelBundles] = useState<ReelBundle[]>([]);
@@ -87,21 +93,19 @@ export function Roulette() {
     const payload = (await response.json()) as ModsResponse;
 
     if (!response.ok) {
-      throw new Error(payload.error || "Не удалось загрузить моды с Modrinth.");
+      throw new Error(language === "ru" ? payload.error || t.roulette.loadFailed : t.roulette.loadFailed);
     }
 
     if (!payload.mods || payload.mods.length === 0) {
-      throw new Error("Modrinth не вернул подходящие моды.");
+      throw new Error(t.roulette.emptyApi);
     }
 
     if (payload.mods.length < dropCount) {
-      throw new Error(
-        `Под эти фильтры нашлось только ${payload.mods.length} модов. Уменьшите количество или расширьте фильтры.`
-      );
+      throw new Error(t.roulette.notEnoughMods(payload.mods.length));
     }
 
     return payload.mods;
-  }, [dropCount, filters]);
+  }, [dropCount, filters, language, t]);
 
   const startSpin = useCallback(async () => {
     if (isBusy) {
@@ -138,13 +142,13 @@ export function Roulette() {
       setError(
         requestError instanceof Error
           ? requestError.message
-          : "Не удалось загрузить моды. Попробуйте снова."
+          : t.roulette.genericLoadFailed
       );
       setSpinning(false);
     } finally {
       setLoading(false);
     }
-  }, [dropCount, isBusy, loadMods]);
+  }, [dropCount, isBusy, loadMods, t]);
 
   useEffect(() => {
     if (!spinPlan || reelBundles.length === 0) {
@@ -156,7 +160,7 @@ export function Roulette() {
       const targetCard = cardRefs.current[spinPlan.targetIndex];
 
       if (!viewport || !targetCard) {
-        setError("Не удалось рассчитать позицию рулетки. Попробуйте еще раз.");
+        setError(t.roulette.positionFailed);
         setSpinning(false);
         return;
       }
@@ -186,7 +190,7 @@ export function Roulette() {
     });
 
     return () => window.cancelAnimationFrame(animationFrame);
-  }, [reelBundles.length, spinPlan]);
+  }, [reelBundles.length, spinPlan, t]);
 
   useEffect(() => {
     return () => {
@@ -197,34 +201,40 @@ export function Roulette() {
   }, []);
 
   return (
-    <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
+    <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_22rem] 2xl:grid-cols-[minmax(0,1fr)_23rem]">
       <section className="min-w-0">
-        <div className="mb-4 grid gap-3 2xl:grid-cols-[minmax(0,1fr)_12rem] 2xl:items-end">
+        <div className="mb-4">
           <Filters
             filters={filters}
             dropCount={dropCount}
+            language={language}
             disabled={isBusy}
             onChange={setFilters}
             onDropCountChange={(count) =>
               setDropCount(Math.min(MAX_DROP_COUNT, Math.max(MIN_DROP_COUNT, Math.floor(count) || 1)))
             }
             onReset={() => setFilters({ version: "", loader: "", category: "" })}
+            action={
+              <button
+                type="button"
+                disabled={isBusy}
+                onClick={startSpin}
+                className="spin-button inline-flex h-12 w-full items-center justify-center gap-3 rounded-md px-5 text-base font-black text-zinc-950 shadow-2xl shadow-emerald-950/50 transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <Sparkles
+                  className={["size-5", spinning ? "animate-spin" : ""].join(" ")}
+                  aria-hidden="true"
+                />
+                {loading ? t.roulette.loading : spinning ? t.roulette.spinning : t.roulette.spin}
+              </button>
+            }
           />
-
-          <button
-            type="button"
-            disabled={isBusy}
-            onClick={startSpin}
-            className="spin-button inline-flex h-14 items-center justify-center gap-3 rounded-md px-7 text-base font-black text-zinc-950 shadow-2xl shadow-emerald-950/50 transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            <Sparkles className={["size-5", spinning ? "animate-spin" : ""].join(" ")} aria-hidden="true" />
-            {loading ? "Загрузка..." : spinning ? "Крутится..." : "Крутить"}
-          </button>
         </div>
 
         {selectedFilterCount > 0 ? (
           <p className="mb-4 text-sm text-zinc-400">
-            Активных фильтров: <span className="font-bold text-emerald-200">{selectedFilterCount}</span>
+            {t.roulette.activeFilters}:{" "}
+            <span className="font-bold text-emerald-200">{selectedFilterCount}</span>
           </p>
         ) : null}
 
@@ -232,7 +242,7 @@ export function Roulette() {
           <div className="toast mb-4 flex items-start gap-3 rounded-lg border border-red-300/30 bg-red-500/12 p-4 text-sm text-red-100">
             <AlertTriangle className="mt-0.5 size-5 shrink-0" aria-hidden="true" />
             <div>
-              <p className="font-black">Рулетка остановилась до старта</p>
+              <p className="font-black">{t.roulette.errorTitle}</p>
               <p className="mt-1 text-red-100/85">{error}</p>
             </div>
           </div>
@@ -273,6 +283,7 @@ export function Roulette() {
                       mods={bundle.mods}
                       index={index % Math.max(1, Math.floor(reelBundles.length / REPEAT_COUNT))}
                       isWinner={highlightIndex === index}
+                      language={language}
                     />
                   </div>
                 ))}
@@ -282,9 +293,9 @@ export function Roulette() {
                 <div className="grid size-16 place-items-center rounded-lg border border-emerald-300/25 bg-emerald-300/10">
                   <Sparkles className="size-8 text-emerald-200" aria-hidden="true" />
                 </div>
-                <h2 className="mt-5 text-2xl font-black text-white">Готово к первой крутке</h2>
+                <h2 className="mt-5 text-2xl font-black text-white">{t.roulette.emptyTitle}</h2>
                 <p className="mt-2 text-sm leading-6 text-zinc-400">
-                  Нажмите “Крутить”, и сайт заново получит случайные моды через Modrinth API.
+                  {t.roulette.emptyDescription}
                 </p>
               </div>
             )}
@@ -296,13 +307,14 @@ export function Roulette() {
             mods={winners}
             installVersion={filters.version}
             installLoader={filters.loader}
+            language={language}
             onInstallError={handleInstallError}
             onClose={() => setWinners([])}
           />
         </div>
       </section>
 
-      <HistoryList items={history} />
+      <HistoryList items={history} language={language} />
     </div>
   );
 }

@@ -1,5 +1,5 @@
-export function formatDownloads(value: number): string {
-  return new Intl.NumberFormat("ru-RU", {
+export function formatDownloads(value: number, language: "ru" | "en" = "ru"): string {
+  return new Intl.NumberFormat(language === "ru" ? "ru-RU" : "en-US", {
     notation: value >= 10000 ? "compact" : "standard",
     maximumFractionDigits: value >= 10000 ? 1 : 0
   }).format(value);

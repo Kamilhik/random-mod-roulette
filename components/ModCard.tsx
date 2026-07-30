@@ -3,10 +3,12 @@
 import { Download, ExternalLink, Pickaxe } from "lucide-react";
 import type { ModProject } from "@/types/mod";
 import { displayLabel, formatDownloads, getVisibleVersions } from "@/lib/format";
+import { UI_TEXT, type Language } from "@/lib/i18n";
 import { InstallButton } from "@/components/InstallButton";
 
 type ModCardProps = {
   mod: ModProject;
+  language: Language;
   isWinner?: boolean;
   compact?: boolean;
   className?: string;
@@ -19,6 +21,7 @@ const LOADER_NAMES = new Set(["fabric", "forge", "neoforge", "quilt"]);
 
 export function ModCard({
   mod,
+  language,
   isWinner = false,
   compact = false,
   className = "",
@@ -26,6 +29,7 @@ export function ModCard({
   installLoader = "",
   onInstallError
 }: ModCardProps) {
+  const t = UI_TEXT[language];
   const loaders = mod.categories
     .filter((category) => LOADER_NAMES.has(category.toLowerCase()))
     .slice(0, 4);
@@ -64,7 +68,9 @@ export function ModCard({
           <h3 className="line-clamp-2 min-h-11 text-base font-extrabold leading-snug text-white">
             {mod.title}
           </h3>
-          <p className="mt-1 truncate text-xs font-medium text-zinc-400">by {mod.author}</p>
+          <p className="mt-1 truncate text-xs font-medium text-zinc-400">
+            {t.modCard.by} {mod.author}
+          </p>
         </div>
       </div>
 
@@ -73,7 +79,9 @@ export function ModCard({
       <div className="mt-auto flex flex-col gap-3">
         <div className="flex items-center gap-2 text-sm font-semibold text-zinc-200">
           <Download className="size-4 text-emerald-300" aria-hidden="true" />
-          <span>{formatDownloads(mod.downloads)} скачиваний</span>
+          <span>
+            {formatDownloads(mod.downloads, language)} {t.modCard.downloads}
+          </span>
         </div>
 
         <div className="flex min-h-7 flex-wrap gap-1.5">
@@ -83,7 +91,7 @@ export function ModCard({
             </span>
           ))}
           {loaders.length === 0 && mod.categories.length === 0 ? (
-            <span className="chip">Без категорий</span>
+            <span className="chip">{t.modCard.noCategories}</span>
           ) : null}
         </div>
 
@@ -95,13 +103,14 @@ export function ModCard({
               </span>
             ))
           ) : (
-            <span className="chip">Версии не указаны</span>
+            <span className="chip">{t.modCard.noVersions}</span>
           )}
         </div>
 
         <div className="grid gap-2">
           <InstallButton
             mod={mod}
+            language={language}
             version={installVersion}
             loader={installLoader}
             onError={onInstallError}
@@ -113,7 +122,7 @@ export function ModCard({
             rel="noreferrer"
             className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-emerald-300/30 bg-emerald-400/12 px-3 text-sm font-bold text-emerald-100 transition hover:border-emerald-200 hover:bg-emerald-400/20"
           >
-            Открыть на Modrinth
+            {t.modCard.open}
             <ExternalLink className="size-4" aria-hidden="true" />
           </a>
         </div>

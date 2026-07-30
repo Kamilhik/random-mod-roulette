@@ -3,16 +3,19 @@
 import { Boxes, Download, PackagePlus } from "lucide-react";
 import type { ModProject } from "@/types/mod";
 import { displayLabel, formatDownloads } from "@/lib/format";
+import { modWord, UI_TEXT, type Language } from "@/lib/i18n";
 
 type ModBundleCardProps = {
   mods: ModProject[];
   index: number;
+  language: Language;
   isWinner?: boolean;
 };
 
 const LOADER_NAMES = new Set(["fabric", "forge", "neoforge", "quilt"]);
 
-export function ModBundleCard({ mods, index, isWinner = false }: ModBundleCardProps) {
+export function ModBundleCard({ mods, index, language, isWinner = false }: ModBundleCardProps) {
+  const t = UI_TEXT[language];
   const visibleMods = mods.slice(0, 12);
   const extraCount = Math.max(0, mods.length - visibleMods.length);
   const downloads = mods.reduce((total, mod) => total + mod.downloads, 0);
@@ -42,10 +45,10 @@ export function ModBundleCard({ mods, index, isWinner = false }: ModBundleCardPr
           </span>
           <div>
             <p className="text-xs font-black uppercase tracking-[0.16em] text-emerald-200">
-              Ящик #{index + 1}
+              {t.bundle.crate} #{index + 1}
             </p>
             <h3 className="text-lg font-black text-white">
-              {mods.length} {mods.length === 1 ? "мод" : mods.length < 5 ? "мода" : "модов"}
+              {mods.length} {modWord(language, mods.length)}
             </h3>
           </div>
         </div>
@@ -88,7 +91,9 @@ export function ModBundleCard({ mods, index, isWinner = false }: ModBundleCardPr
         ))}
         {mods.length > 4 ? (
           <p className="text-xs font-semibold text-zinc-400">
-            И еще {mods.length - 4} {mods.length - 4 === 1 ? "мод" : "модов"}
+            {language === "ru"
+              ? `${t.bundle.andMore} ${mods.length - 4} ${modWord(language, mods.length - 4)}`
+              : `${t.bundle.andMore} ${mods.length - 4} more ${modWord(language, mods.length - 4)}`}
           </p>
         ) : null}
       </div>
@@ -96,7 +101,9 @@ export function ModBundleCard({ mods, index, isWinner = false }: ModBundleCardPr
       <div className="mt-auto flex flex-col gap-3 pt-3">
         <div className="flex items-center gap-2 text-sm font-semibold text-zinc-200">
           <Download className="size-4 text-emerald-300" aria-hidden="true" />
-          <span>{formatDownloads(downloads)} скачиваний суммарно</span>
+          <span>
+            {formatDownloads(downloads, language)} {t.bundle.totalDownloads}
+          </span>
         </div>
 
         <div className="flex min-h-7 flex-wrap gap-1.5">
@@ -107,7 +114,7 @@ export function ModBundleCard({ mods, index, isWinner = false }: ModBundleCardPr
               </span>
             ))
           ) : (
-            <span className="chip">Смешанный набор</span>
+            <span className="chip">{t.bundle.mixed}</span>
           )}
         </div>
       </div>

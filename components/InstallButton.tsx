@@ -2,11 +2,13 @@
 
 import { useMemo, useState } from "react";
 import { Download, Loader2, PackagePlus, X } from "lucide-react";
+import { modWord, UI_TEXT, type Language } from "@/lib/i18n";
 import type { ModInstallOptions, ModInstallVersion, ModProject } from "@/types/mod";
 
 type InstallButtonProps = {
   mod?: ModProject;
   mods?: ModProject[];
+  language: Language;
   version?: string;
   loader?: string;
   label?: string;
@@ -26,12 +28,14 @@ const LOADER_ORDER = ["fabric", "forge", "neoforge", "quilt"];
 export function InstallButton({
   mod,
   mods,
+  language,
   version = "",
   loader = "",
   label,
   onError,
   className = ""
 }: InstallButtonProps) {
+  const t = UI_TEXT[language];
   const installMods = useMemo(() => {
     const source = mods ?? (mod ? [mod] : []);
     return [...new Map(source.map((item) => [item.slug, item])).values()];
@@ -87,7 +91,7 @@ export function InstallButton({
       const payload = (await response.json()) as VersionsPayload;
 
       if (!response.ok) {
-        throw new Error(payload.error ?? "Не удалось загрузить версии модов.");
+        throw new Error(language === "ru" ? payload.error ?? t.install.versionsFailed : t.install.versionsFailed);
       }
 
       const loadedOptions = payload.mods ?? [];
@@ -107,7 +111,7 @@ export function InstallButton({
       setSelectedVersionIds(pickDefaultVersionIds(loadedOptions, nextMinecraftVersion, nextLoader));
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : "Не удалось загрузить версии для установки.";
+        error instanceof Error ? error.message : t.install.genericVersionsFailed;
       setModalError(message);
       onError?.(message);
     } finally {
@@ -162,7 +166,7 @@ export function InstallButton({
 
       if (!response.ok) {
         const payload = (await response.json().catch(() => null)) as { error?: string } | null;
-        throw new Error(payload?.error ?? "Не удалось собрать modpack.");
+        throw new Error(language === "ru" ? payload?.error ?? t.install.packFailed : t.install.packFailed);
       }
 
       const blob = await response.blob();
@@ -180,7 +184,7 @@ export function InstallButton({
       window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
       setOpen(false);
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Не удалось скачать архив.";
+      const message = error instanceof Error ? error.message : t.install.archiveFailed;
       setModalError(message);
       onError?.(message);
     } finally {
@@ -211,7 +215,7 @@ export function InstallButton({
         ].join(" ")}
       >
         <PackagePlus className="size-4" aria-hidden="true" />
-        {label ?? (installMods.length > 1 ? "Скачать modpack" : "Скачать .mrpack")}
+        {label ?? (installMods.length > 1 ? t.install.openMany : t.install.openSingle)}
       </button>
 
       {open ? (
@@ -220,17 +224,19 @@ export function InstallButton({
             <div className="flex items-center justify-between gap-4 border-b border-white/10 p-4">
               <div className="min-w-0">
                 <p className="text-xs font-black uppercase tracking-[0.18em] text-emerald-200">
-                  Modpack setup
+                  {t.install.setup}
                 </p>
                 <h3 className="truncate text-xl font-black text-white">
-                  {installMods.length === 1 ? installMods[0].title : `${installMods.length} модов`}
+                  {installMods.length === 1
+                    ? installMods[0].title
+                    : `${installMods.length} ${modWord(language, installMods.length)}`}
                 </h3>
               </div>
               <button
                 type="button"
                 onClick={() => setOpen(false)}
                 className="grid size-10 shrink-0 place-items-center rounded-md border border-white/10 text-zinc-300 transition hover:border-white/25 hover:text-white"
-                aria-label="Закрыть установку"
+                aria-label={t.install.close}
               >
                 <X className="size-5" aria-hidden="true" />
               </button>
@@ -241,14 +247,14 @@ export function InstallButton({
                 <div className="grid min-h-64 place-items-center text-zinc-300">
                   <div className="flex items-center gap-3 text-sm font-bold">
                     <Loader2 className="size-5 animate-spin text-emerald-300" aria-hidden="true" />
-                    Загружаю версии модов...
+                    {t.install.loadingVersions}
                   </div>
                 </div>
               ) : (
                 <div className="grid gap-4">
                   <div className="grid gap-3 md:grid-cols-2">
                     <label className="flex flex-col gap-2 text-sm font-semibold text-zinc-200">
-                      Версия Minecraft
+                      {t.filters.version}
                       <select
                         value={minecraftVersion}
                         onChange={(event) => updateMinecraftVersion(event.target.value)}
@@ -263,7 +269,7 @@ export function InstallButton({
                     </label>
 
                     <label className="flex flex-col gap-2 text-sm font-semibold text-zinc-200">
-                      Loader
+                      {t.filters.loader}
                       <select
                         value={selectedLoader}
                         onChange={(event) => updateLoader(event.target.value)}
@@ -322,7 +328,7 @@ export function InstallButton({
                             </select>
                           ) : (
                             <div className="rounded-md border border-red-300/25 bg-red-500/10 p-3 text-sm font-semibold text-red-100">
-                              Нет файла под эту версию Minecraft и loader.
+                              {t.install.noFile}
                             </div>
                           )}
                         </div>
@@ -341,7 +347,7 @@ export function InstallButton({
 
             <div className="flex flex-col gap-3 border-t border-white/10 p-4 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-xs leading-5 text-zinc-400">
-                Форматы: .mrpack для лаунчеров или .zip с готовыми файлами, {installMods.length} {installMods.length === 1 ? "мод" : "модов"}
+                {t.install.footer(installMods.length)}
               </p>
               <div className="grid gap-2 sm:grid-cols-2">
                 <button
@@ -361,7 +367,7 @@ export function InstallButton({
                   ) : (
                     <Download className="size-4" aria-hidden="true" />
                   )}
-                  {installingFormat === "mrpack" ? "Собираю..." : "Скачать .mrpack"}
+                  {installingFormat === "mrpack" ? t.install.downloadingMrpack : t.install.downloadMrpack}
                 </button>
 
                 <button
@@ -381,7 +387,7 @@ export function InstallButton({
                   ) : (
                     <Download className="size-4 text-emerald-300" aria-hidden="true" />
                   )}
-                  {installingFormat === "zip" ? "Качаю файлы..." : "Скачать ZIP"}
+                  {installingFormat === "zip" ? t.install.downloadingZip : t.install.downloadZip}
                 </button>
               </div>
             </div>
